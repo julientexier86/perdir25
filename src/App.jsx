@@ -2,13 +2,9 @@ import { useState } from "react";
 import { TrendingUp, Users } from "lucide-react";
 import { motion } from "framer-motion";
 
-const tabs = ["Simulation"];
-
 export default function App() {
-  const [tab, setTab] = useState("Simulation");
   const [rang, setRang] = useState(1);
   const [resultats, setResultats] = useState([]);
-  const [sortOption, setSortOption] = useState("fermeture");
 
   const academies = [
     { name: "Aix-Marseille", pressure: 75, places: 25, fermeture: 426 },
@@ -40,29 +36,9 @@ export default function App() {
 
   const calculerAccessibles = () => {
     const accessibles = academies
-      .map((a) => ({
-        ...a,
-        adjustedPlaces: Math.floor(a.places * 0.9)
-      }))
-      .filter((a) => rang <= a.fermeture && a.adjustedPlaces > 0);
-
-    switch (sortOption) {
-      case "pressure-desc":
-        accessibles.sort((a, b) => b.pressure - a.pressure);
-        break;
-      case "pressure-asc":
-        accessibles.sort((a, b) => a.pressure - b.pressure);
-        break;
-      case "places-desc":
-        accessibles.sort((a, b) => b.adjustedPlaces - a.adjustedPlaces);
-        break;
-      case "name-asc":
-        accessibles.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        accessibles.sort((a, b) => a.fermeture - b.fermeture);
-        break;
-    }
+      .map(a => ({ ...a, adjustedPlaces: Math.floor(a.places * 0.9) })) // Appliquer la réserve de 10%
+      .filter(a => rang <= a.fermeture && a.adjustedPlaces > 0)
+      .sort((a, b) => a.fermeture - b.fermeture); // tri par ordre de fermeture
     setResultats(accessibles);
   };
 
@@ -75,93 +51,58 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-white p-8">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-indigo-700 mb-2">Bienvenue sur le simulateur d’affectation PERDIR 2025</h1>
+        <h1 className="text-4xl font-bold text-indigo-700 mb-2">
+          Simulateur PERDIR 2025
+        </h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Ce simulateur a pour vocation d’aider les lauréats du concours de personnels de direction à estimer leurs opportunités d’affectation.
-          Il s’appuie sur les tensions académiques constatées en 2024, en tenant compte d’une réserve arbitraire de 10% des postes pour les bénéficiaires de l’obligation d’emploi (travailleurs handicapés).
+          Estimez vos opportunités d’affectation selon votre rang et les tensions 2024
+          (avec réserve arbitraire de 10% pour travailleurs handicapés).
         </p>
       </header>
 
-      <div className="flex justify-center gap-4 mb-8">
-        {tabs.map((item) => (
-          <button
-            key={item}
-            onClick={() => setTab(item)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition ${tab === item ? "bg-indigo-600 text-white" : "bg-white border border-indigo-600 text-indigo-600"}`}
+      <div className="flex flex-col items-center mb-8">
+        <input
+          type="number"
+          value={rang}
+          onChange={(e) => setRang(Number(e.target.value))}
+          className="border p-3 rounded-lg w-48 mb-4"
+          placeholder="Votre rang"
+        />
+        <button
+          onClick={calculerAccessibles}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg"
+        >
+          Voir les académies
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        {resultats.map((a, idx) => (
+          <motion.div
+            key={idx}
+            className="bg-white rounded-2xl p-6 shadow hover:shadow-lg"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: idx * 0.05 }}
           >
-            {item}
-          </button>
+            <h2 className="text-2xl font-bold text-indigo-700 mb-2">{a.name}</h2>
+            <p className="flex items-center gap-2 text-gray-700">
+              {getPressureColor(a.pressure)} <TrendingUp className="w-4 h-4" />
+              Tension : <span className="font-bold">{a.pressure}%</span>
+            </p>
+            <p className="flex items-center gap-2 text-gray-700 mt-2">
+              <Users className="w-4 h-4" />
+              Places restantes : <span className="font-bold">{a.adjustedPlaces}</span>
+            </p>
+          </motion.div>
         ))}
       </div>
 
-      {tab === "Simulation" && (
-        <div className="flex flex-col items-center">
-          <div className="flex gap-4 mb-6">
-            <input
-              type="number"
-              value={rang}
-              onChange={(e) => setRang(Number(e.target.value))}
-              className="border p-3 rounded-lg shadow w-48 text-lg"
-              placeholder="Votre rang"
-            />
-            <button
-              onClick={calculerAccessibles}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow text-lg"
-            >
-              Voir les académies
-            </button>
-          </div>
-
-          <div className="flex flex-col items-center mb-6">
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="border p-3 rounded-lg shadow w-64 text-lg"
-            >
-              <option value="fermeture">Ordre de fermeture (par défaut)</option>
-              <option value="pressure-desc">Tension décroissante</option>
-              <option value="pressure-asc">Tension croissante</option>
-              <option value="places-desc">Places décroissantes</option>
-              <option value="name-asc">Ordre alphabétique</option>
-            </select>
-          </div>
-
-          {resultats.length > 0 && (
-            <div className="text-center mb-6">
-              <p className="text-lg font-semibold text-indigo-700">
-                {resultats.length} académie{resultats.length > 1 ? "s" : ""} accessible{resultats.length > 1 ? "s" : ""}
-              </p>
-              <p className="text-sm text-gray-600">Tri actuel : {sortOption.replace("-", " ")}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-            {resultats.map((a, idx) => (
-              <motion.div
-                key={idx}
-                className="p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-              >
-                <h2 className="text-2xl font-semibold text-indigo-800 mb-2">{a.name}</h2>
-                <p className="text-gray-700 flex items-center gap-2">
-                  {getPressureColor(a.pressure)} <TrendingUp className="w-5 h-5 text-indigo-500" />
-                  Taux de pression : <span className="font-bold">{a.pressure}%</span>
-                </p>
-                <p className="text-gray-700 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-green-500" />
-                  Places restantes : <span className="font-bold">{a.adjustedPlaces}</span>
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <footer className="mt-12 text-center text-sm text-gray-500">
         <div className="bg-yellow-100 p-4 rounded-lg inline-block max-w-2xl mx-auto">
-          <strong>Avertissement :</strong> Ce simulateur est une aide à la décision. Il repose sur des données passées (année 2024) et ne préjuge pas des affectations réelles. Les informations fournies ne sont pas officielles.
+          <strong>Avertissement :</strong> Ce simulateur est une aide à la décision. 
+          Il repose sur des données passées (année 2024) et ne préjuge pas des affectations réelles. 
+          Les informations fournies ne sont pas officielles.
         </div>
       </footer>
     </div>
